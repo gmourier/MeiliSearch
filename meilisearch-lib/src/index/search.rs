@@ -34,7 +34,7 @@ pub const fn default_crop_length() -> usize {
     DEFAULT_CROP_LENGTH
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SearchQuery {
     pub q: Option<String>,

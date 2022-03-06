@@ -6,6 +6,8 @@ use meilisearch_lib::index::{default_crop_length, SearchQuery, DEFAULT_SEARCH_LI
 use meilisearch_lib::MeiliSearch;
 use serde::Deserialize;
 use serde_json::Value;
+use uuid::Uuid;
+use serde_json::json;
 
 use crate::analytics::{Analytics, SearchAggregator};
 use crate::extractors::authentication::{policies::*, GuardedData};
@@ -148,7 +150,7 @@ pub async fn search_with_url_query(
 
     let mut aggregate = SearchAggregator::from_query(&query, &req);
 
-    let search_result = meilisearch.search(index_uid, query).await;
+    let search_result = meilisearch.search(&index_uid, query).await;
     if let Ok(ref search_result) = search_result {
         aggregate.succeed(search_result);
     }
@@ -172,7 +174,6 @@ pub async fn search_with_post(
     analytics: web::Data<dyn Analytics>,
 ) -> Result<HttpResponse, ResponseError> {
     let mut query = params.into_inner();
-    debug!("search called with params: {:?}", query);
 
     let index_uid = path.into_inner();
     // Tenant token search_rules.
@@ -184,9 +185,12 @@ pub async fn search_with_post(
         add_search_rules(&mut query, search_rules);
     }
 
+
     let mut aggregate = SearchAggregator::from_query(&query, &req);
 
-    let search_result = meilisearch.search(index_uid, query).await;
+    let query_params = query.clone(); //Getting shit done
+
+    let search_result = meilisearch.search(&index_uid, query).await;
     if let Ok(ref search_result) = search_result {
         aggregate.succeed(search_result);
     }
@@ -198,7 +202,21 @@ pub async fn search_with_post(
     #[cfg(test)]
     assert!(!search_result.exhaustive_nb_hits);
 
-    debug!("returns: {:?}", search_result);
+
+    // Building search analytics json log
+    // Generate request uuid to merge analytics trace
+    let uuid = Uuid::new_v4();
+
+    let search_analytics_trace = json!(
+        {
+            "request_uuid": uuid,
+            "index": index_uid,
+            "q": query_params.q,
+            "nb_hits": search_result.nb_hits
+        }
+    );
+    debug!("{:?}", serde_json::to_string(&search_analytics_trace).unwrap());
+
     Ok(HttpResponse::Ok().json(search_result))
 }
 

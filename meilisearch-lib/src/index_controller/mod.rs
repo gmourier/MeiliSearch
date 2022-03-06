@@ -547,8 +547,8 @@ where
         Ok(document)
     }
 
-    pub async fn search(&self, uid: String, query: SearchQuery) -> Result<SearchResult> {
-        let index = self.index_resolver.get_index(uid).await?;
+    pub async fn search(&self, uid: &String, query: SearchQuery) -> Result<SearchResult> {
+        let index = self.index_resolver.get_index((&uid).to_string()).await?;
         let result = spawn_blocking(move || index.perform_search(query)).await??;
         Ok(result)
     }
